@@ -1,0 +1,74 @@
+//gradle wrapper 生成gradle wrapper及脚本
+// gradle build   
+buildscript {
+    repositories {
+        mavenLocal()
+        maven { url 'https://mirrors.cloud.tencent.com/gradle/'}
+		maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }
+		maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+		maven { url 'https://maven.aliyun.com/nexus/content/groups/public' }
+		maven { url 'https://maven.aliyun.com/nexus/content/repositories/jcenter' }
+		maven { url 'https://maven.aliyun.com/repository/jcenter' }
+		maven { url 'https://maven.aliyun.com/repository/google' }
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        maven { url "https://maven.pkg.jetbrains.space/public/p/ktor/eap"}
+        //jcenter()
+        google()
+    }
+}
+
+
+plugins{
+	id 'java-library'
+	id 'maven-publish'
+	alias libs.plugins.kotlin
+	alias libs.plugins.kotlin.serialization
+    alias libs.plugins.devtools.ksp
+}
+
+group 'com.github.rwsbillyang'
+version libs.versions.cronVersion.get()
+
+
+
+
+
+dependencies {
+    implementation libs.kotlin.stdlib.jdk8
+    //implementation libs.kotlin.serialization.json
+
+    implementation libs.kotlinx.coroutines.core
+	
+    testImplementation libs.junit.junit
+}
+
+
+kotlin {
+    sourceSets.main {
+        kotlin.srcDir("build/generated/ksp/main/kotlin")
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+}
+
+sourceSets {
+    main.kotlin.srcDirs = main.java.srcDirs = ['src']
+    test.kotlin.srcDirs = test.java.srcDirs = ['test']
+    main.resources.srcDirs = ['resources']
+    test.resources.srcDirs = ['testresources']
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
