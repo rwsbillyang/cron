@@ -2,7 +2,29 @@ A variant of traditional cron implemented by Kotlin.
 
 It aims to find the nearest datetime and distance since a specified datetime(such as now()).
 
+
+## Add dependency
+
+Step 1. Add the JitPack repository to your build file
+Add it in your root build.gradle at the end of repositories:
+```gradle
+	allprojects {
+		repositories {
+			...
+			maven { url 'https://jitpack.io' }
+		}
+	}
+```
+
+Step 2. Add the dependency
+```gradle
+	dependencies {
+	        implementation 'com.github.rwsbillyang:cron:1.0.0'
+	}
+```
+
 ## Get Started
+
 
 ```kotlin
     //first step: create cron
@@ -17,12 +39,13 @@ It aims to find the nearest datetime and distance since a specified datetime(suc
     //accroding to the cron above, the result is 2026-1-2 6:30
     cron.getNext(LocalDateTime.of(2025, 2, 28,23,40,0)){    //2025-2-28: Friday
         //2026-1-2 :Friday
-        log("ok=" + (it == Result(2026, 1, 2, 6,30, 24*60*307L+410)))// //ok=true
+        log("ok=" + (it == Result(2026, 1, 2, 6,30, 24*60*307L+410))) //ok=true
     }
 ```
 
 ## Detail
-```
+
+```kotlin
 /**
  * @param year the value Cron.AnyYear(zero) means *, else it is the specified year
  * @param month Cron.AnyValue(Int.MAX_VALUE(0x7FFFFFFF)) means *，the bits in bit[0~11] means months
@@ -51,7 +74,6 @@ class Cron(
      * @param onFinished the callback notifys the result of the nearest datetime and distance. null if not found.
      * */
     fun getNext(sinceDateTime: LocalDateTime, onFinished: (r: Result?)->Unit )
-
 
 
 
@@ -93,7 +115,7 @@ class Result(
 
 ### More examples
 
-```
+```kotlin
 fun test_hour_minute(){
     //every day 6:30, 12:30, 18:30, 23:30
     val cron = Cron(hour = (1 shl 6) or (1 shl 12) or (1 shl 18) or (1 shl 23), minute = 30)
