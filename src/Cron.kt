@@ -1,5 +1,20 @@
-package com.github.rwsbillyang.cron
+/*
+ * ```
+ * Copyright © 2025 rwsbillyang@qq.com.  All Rights Reserved.
+ *
+ * Written by rwsbillyang@qq.com at Beijing Time: 2025-02-07 16:10
+ *
+ * NOTICE:
+ * This software is protected by China and U.S. Copyright Law and International Treaties.
+ * Unauthorized use, duplication, reverse engineering, any form of redistribution,
+ * or use in part or in whole other than by prior, express, printed and signed license
+ * for use is subject to civil and criminal prosecution. If you have received this file in error,
+ * please notify copyright holder and destroy this and any other copies as instructed.
+ * ```
+ */
 
+
+package com.github.rwsbillyang.cron
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
@@ -411,13 +426,13 @@ class Cron(
             }else{
                 val customFirstDay = LocalDate.of(customPeriod.firstYear, customPeriod.firstMonth, customPeriod.firstDay)
                 var sinceBit2 = diffDate(customFirstDay, newSince) % customPeriod.period//since是自定义周期的第几日索引
-                if(sinceBit2 < 0) sinceBit2 += 8 //注意：负数求余问题
+                if(sinceBit2 < 0) sinceBit2 += customPeriod.period //注意：负数求余问题
                 val p = getNext(customPeriod.bits, sinceBit2, customPeriod.period, true) //必有值，除非值设置有问题
                 if (p == null) {
                     finish("invalid cron.customDay=$${customPeriod.bits.toBinary()}")
                     return
                 } else {
-                    c_d = p.second//从 y-m-1起开始的距离
+                    c_d = p.second//距离
                     log("get customDay distance=$c_d, customDay=${p.first}, sinceBit=$sinceBit2")
                 }
             }
@@ -642,7 +657,7 @@ class Cron(
      * 若借位，从fromBit下一个bit位开始检查比特位是否被设置；无借位，从fromBit开始搜索，相当于从当前（月日时等）开始检查搜索。
      * 对于最近的日期时间，fromBit则是now对应的比特位开始搜索比较。若有借位，相当于从下一个（月日时等）开始检查搜索。
      *
-     *  Bug：对于月份中的第几日来说，每月的天数不相同，则返回结果有问题。
+     *  Note：对于月份中的第几日来说，每月的天数不相同，则返回结果有问题。
      *  比如，当设置mday为31日时，亦即cron中的bit[30]=1，而月份设置为2,4,6等月时，即月份的cron的bit[1,3,5]=1，若将周期period设为30则永远找不到结果，应该返回-1出错
      *  即使月份设置为1,3等月有31天时，即月份的cron的bit[0,2]=1，应该动态调整搜索period，并且返回值：到fromBit的距离，应该记录下所有循环过程
      * */

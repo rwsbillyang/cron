@@ -1,3 +1,18 @@
+/*
+ * ```
+ * Copyright © 2025 rwsbillyang@qq.com.  All Rights Reserved.
+ *
+ * Written by rwsbillyang@qq.com at Beijing Time: 2025-02-04 21:06
+ *
+ * NOTICE:
+ * This software is protected by China and U.S. Copyright Law and International Treaties.
+ * Unauthorized use, duplication, reverse engineering, any form of redistribution,
+ * or use in part or in whole other than by prior, express, printed and signed license
+ * for use is subject to civil and criminal prosecution. If you have received this file in error,
+ * please notify copyright holder and destroy this and any other copies as instructed.
+ * ```
+ */
+
 package com.github.rwsbillyang.cron
 
 import java.time.LocalDate
@@ -7,7 +22,7 @@ import kotlin.math.abs
 val month_days = arrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 val month_days_leap_year = arrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
-const val EnableLog = true
+const val EnableLog = false
 inline fun log(msg: String) {
     if (EnableLog) println(msg)
 }
