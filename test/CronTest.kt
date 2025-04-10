@@ -27,7 +27,15 @@ import org.junit.Test
 import java.time.LocalDateTime
 
 class CronTest {
+    @Test
+    fun test_hour_minute0(){
+        ////0,6,10,12,15  20
+        val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 10) or (1 shl 12) or (1 shl 15), minute = 20)
 
+        cron.getNext(LocalDateTime.of(2025, 4, 10,15,21,0)){
+            Assert.assertTrue(it == Result(2025, 4, 11, 0,20, 539L))
+        }
+    }
     @Test
     fun test_hour_minute() {
         //6:30, 12:30, 18:30, 23:30
@@ -55,6 +63,8 @@ class CronTest {
 
     @Test
     fun test_wday_hour_minute() {
+        //C language中sunday为0， monday为1...
+        //Monday, Tuesday, Wednesday, Thursday, Friday, Saturday and Sunday
         //Monday Wednesday Friday: 6:30, 12:30, 18:30, 23:30
         val cron = Cron( wday = 1 or (1 shl 2) or (1 shl 4), hour = (1 shl 6) or (1 shl 12) or (1 shl 18) or (1 shl 23), minute = 30)
 
@@ -89,7 +99,6 @@ class CronTest {
     fun test_customday_hour_minute() {
         //2025.2.7 first day, period=8 ,first and second day are set 1
         val customPeriod = CustomPeriod(3, 8,2025,2,7)
-
         val cron = Cron(customPeriod = customPeriod, hour = (1 shl 6) or (1 shl 16), minute = 30)
 
         cron.getNext(LocalDateTime.of(2025, 2, 6,6,20,0)){
@@ -231,7 +240,7 @@ class CronTest {
     }
 
     @Test
-    fun test_month_customday_hour_minute() {
+    fun test_year_customday_hour_minute() {
         //2025.2.7 first day, period=8 ,first and second day are set 1
         val customPeriod = CustomPeriod(3, 8,2025,2,7)
         val cron = Cron(year = 2025, customPeriod = customPeriod, hour = (1 shl 6) or (1 shl 16), minute = 30)

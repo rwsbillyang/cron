@@ -114,11 +114,11 @@ fun passedDays(d: LocalDate): Int {
  *
  */
 fun restDaysInYear(d: LocalDate): Int {
-    var leftDays = daysInMonth(d.year, d.month.ordinal) - d.dayOfMonth;
+    var days = daysInMonth(d.year, d.month.ordinal) - d.dayOfMonth;
     for (i in d.month.ordinal+1 until 12) {
-        leftDays += daysInMonth(d.year, i);
+        days += daysInMonth(d.year, i);
     }
-    return leftDays;
+    return days;
 }
 
 /**

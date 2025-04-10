@@ -31,7 +31,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         libs {
             //from(files("../../libs.versions.toml"))
-            from("com.github.rwsbillyang:version-catalog:1.0.2")
+            from("com.github.rwsbillyang:versioncatalog:1.0.3")
         }
     }
 }

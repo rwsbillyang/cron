@@ -321,7 +321,7 @@ class Cron(
         if (isFromScratch) {//下一年或下几个月的情形
             //若sinceMonth为0，必有值，除非cron.month=0
             //若指定的是某个周期的第几天，或者是31天，又指定了某些月份，恰好这几个月份不存在这几天，就有可能找不到
-            val p = getNext(month, sinceBit, 12, false)
+            val p = getNextBit(month, sinceBit, 12, false)
             if (p == null) {
                 if (sinceBit == 0){
                     finish( "invalid cron.month=${month.toBinary()}")
@@ -330,7 +330,7 @@ class Cron(
                     log("not found month sinceBit=$sinceBit")
 
                     //上面的[sinceBit,12)中没有设置位，再从头开始找，若找到了，说明下一年中有设置
-                    val p2 = getNext(month, 0, 12, false)
+                    val p2 = getNextBit(month, 0, 12, false)
                     if(p2 == null){
                         finish( "invalid cron.month=${month.toBinary()}")
                         return
@@ -348,7 +348,7 @@ class Cron(
         } else {//本年情形
             //本应分别检查sinceMonth之前和之后的bit位，然后做出不同的处理
             //现改为一次检查所有month比特位，根据结果分别做处理
-            val p = getNext(month, sinceBit, 12, true)
+            val p = getNextBit(month, sinceBit, 12, true)
             if (p == null) {
                 finish("invalid cron.month=${month.toBinary()}")
                 return
@@ -392,6 +392,7 @@ class Cron(
         var d_d: Int = Int.MAX_VALUE
 
         //val sinceDay = if(isFromScratch) 0 else since.dayOfMonth - 1
+        //Monday, Tuesday, Wednesday, Thursday, Friday, Saturday and Sunday
         val newSince = LocalDate.of(result.year, result.month, sinceBit+1)
         //星期cron有设置
         if (wday > 0) {//星期有设置
@@ -403,7 +404,7 @@ class Cron(
                 return
             }else{
                 val sinceBit2 = newSince.dayOfWeek.ordinal
-                val p = getNext(wday, sinceBit2, 7, true) //必有值，除非值设置有问题
+                val p = getNextBit(wday, sinceBit2, 7, true) //必有值，除非值设置有问题
                 if (p == null) {
                     finish("invalid cron.wday=${wday.toBinary()}")
                     return
@@ -427,7 +428,7 @@ class Cron(
                 val customFirstDay = LocalDate.of(customPeriod.firstYear, customPeriod.firstMonth, customPeriod.firstDay)
                 var sinceBit2 = diffDate(customFirstDay, newSince) % customPeriod.period//since是自定义周期的第几日索引
                 if(sinceBit2 < 0) sinceBit2 += customPeriod.period //注意：负数求余问题
-                val p = getNext(customPeriod.bits, sinceBit2, customPeriod.period, true) //必有值，除非值设置有问题
+                val p = getNextBit(customPeriod.bits, sinceBit2, customPeriod.period, true) //必有值，除非值设置有问题
                 if (p == null) {
                     finish("invalid cron.customDay=$${customPeriod.bits.toBinary()}")
                     return
@@ -447,7 +448,7 @@ class Cron(
                 return
             }
             val maxDaysOfMonth = daysInMonth(result.year, result.month - 1)
-            val p = getNext(mday, sinceBit, maxDaysOfMonth, true)
+            val p = getNextBit(mday, sinceBit, maxDaysOfMonth, true)
             if (p == null)//未找到，
             {
                 if (maxDaysOfMonth == 31) {//直至maxDaysOfMonth为31为止，因只有31才能检索了所有比特位
@@ -536,7 +537,7 @@ class Cron(
         }
 
         if (isFromScratch) {
-            val p = getNext(hour, sinceBit, 24, false)
+            val p = getNextBit(hour, sinceBit, 24, false)
             if (p == null) {
                 val err =
                     if (sinceBit == 0) "invalid cron.hour=${hour.toBinary()}" else "not found hour sinceHour=$sinceBit"
@@ -551,7 +552,7 @@ class Cron(
         } else {
             //本应分别检查since之前和之后的bit位，然后做出不同的处理
             //现改为一次检查所有比特位，根据结果分别做处理
-            val p = getNext(hour, sinceBit, 24, true)
+            val p = getNextBit(hour, sinceBit, 24, true)
             if (p == null) {
                 finish("invalid cron.hour=${hour.toBinary()}, sinceHour=$sinceBit")
                 return
@@ -630,9 +631,12 @@ class Cron(
                     {
                         log("to updateMonth because foundMinute=$foundMinute before sinceMinute=$sinceMinute cause hour+1->day+1->month+1")
                         sendUpdateMsg(UpdateWhich.Month, newSince.month.ordinal, true)
-                    } else {//日进位
+                    }else if(newSince.dayOfMonth != result.day){ //日进位
                         log("to updateDay because foundMinute=$foundMinute before sinceMinute=$sinceMinute cause hour+1->day+1")
                         sendUpdateMsg(UpdateWhich.Day, newSince.dayOfMonth - 1, true)
+                    } else {
+                        log("to updateHour because foundMinute=$foundMinute before sinceMinute=$sinceMinute cause hour+1->hour+1")
+                        sendUpdateMsg(UpdateWhich.Hour, newSince.hour, false)
                     }
                 }
             }
@@ -661,7 +665,7 @@ class Cron(
      *  比如，当设置mday为31日时，亦即cron中的bit[30]=1，而月份设置为2,4,6等月时，即月份的cron的bit[1,3,5]=1，若将周期period设为30则永远找不到结果，应该返回-1出错
      *  即使月份设置为1,3等月有31天时，即月份的cron的bit[0,2]=1，应该动态调整搜索period，并且返回值：到fromBit的距离，应该记录下所有循环过程
      * */
-    private fun getNext(cron: Int, since: Int, period: Int, checkAllBits: Boolean): Pair<Int, Int>? {
+    private fun getNextBit(cron: Int, since: Int, period: Int, checkAllBits: Boolean): Pair<Int, Int>? {
         if (cron == AnyValue) {//* 任意值, 与since相同
             return Pair(since, 0)
         } else {
@@ -685,9 +689,16 @@ class Cron(
 
 fun main()
 {
-    test_month_customday_hour_minute()
+    test_hour_minute0()
 }
+fun test_hour_minute0(){
+    ////0,6,10,12,15  20
+    val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 10) or (1 shl 12) or (1 shl 15), minute = 20)
 
+    cron.getNext(LocalDateTime.of(2025, 4, 10,15,21,0)){
+        log("ok=" + (it == Result(2025, 4, 11, 0,20, 539L)))
+    }
+}
 fun test_hour_minute(){
     //every day 6:30, 12:30, 18:30, 23:30
     val cron = Cron(hour = (1 shl 6) or (1 shl 12) or (1 shl 18) or (1 shl 23), minute = 30)
