@@ -29,11 +29,29 @@ import java.time.LocalDateTime
 class CronTest {
     @Test
     fun test_hour_minute0(){
-        ////0,6,10,12,15  20
+        //0,6,10,12,15  20
         val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 10) or (1 shl 12) or (1 shl 15), minute = 20)
 
         cron.getNext(LocalDateTime.of(2025, 4, 10,15,21,0)){
             Assert.assertTrue(it == Result(2025, 4, 11, 0,20, 539L))
+        }
+    }
+    @Test
+    fun test_hour_minute01(){
+        //0,6,9，10,12, 52
+        val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 9) or (1 shl 10) or (1 shl 12) , minute = 52)
+
+        cron.getNext(LocalDateTime.of(2025, 4, 11,9,53,0)){
+            Assert.assertTrue(it == Result(2025, 4, 11, 10,52, 59L))
+        }
+    }
+    @Test
+    fun test_hour_minute02(){
+        //0,6,9，10,12, 29
+        val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 9) or (1 shl 10) or (1 shl 12) , minute = 29)
+
+        cron.getNext(LocalDateTime.of(2025, 4, 11,12,30,0)){
+            Assert.assertTrue(it == Result(2025, 4, 12, 0,29, 12*60-1L))
         }
     }
     @Test

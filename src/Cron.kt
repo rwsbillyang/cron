@@ -536,58 +536,42 @@ class Cron(
             return
         }
 
-        if (isFromScratch) {
-            val p = getNextBit(hour, sinceBit, 24, false)
-            if (p == null) {
-                val err =
-                    if (sinceBit == 0) "invalid cron.hour=${hour.toBinary()}" else "not found hour sinceHour=$sinceBit"
-                finish(err)
-                return
-            } else {
-                result.hour = p.first
-                log("cron.hour=${hour.toBinary()} , get h=${result.hour}, to update minute from scratch ...")
-                sendUpdateMsg(UpdateWhich.Minute, 0, true)
-                return
-            }
+        //本应分别检查since之前和之后的bit位，然后做出不同的处理
+        //现改为一次检查所有比特位，根据结果分别做处理
+        val p = getNextBit(hour, sinceBit, 24, true)
+        if (p == null) {
+            finish("invalid cron.hour=${hour.toBinary()}, sinceHour=$sinceBit")
+            return
         } else {
-            //本应分别检查since之前和之后的bit位，然后做出不同的处理
-            //现改为一次检查所有比特位，根据结果分别做处理
-            val p = getNextBit(hour, sinceBit, 24, true)
-            if (p == null) {
-                finish("invalid cron.hour=${hour.toBinary()}, sinceHour=$sinceBit")
-                return
-            } else {
-                val foundHour = p.first
-                if (foundHour < sinceBit)//[since,23]没有置1，也就是得在下一日中，从0时开始寻找
+            val foundHour = p.first
+            if (foundHour < sinceBit)//[since,23]没有置1，也就是得在下一日中，从0时开始寻找
+            {
+                //sinceHour之前的小时只能在下一天，day进位又肯能引起月进位，月又可能引起年进位
+                val newSince = LocalDate.of(result.year, result.month, result.day).plusDays(1)
+                if (newSince.year > result.year)//年进位
                 {
-                    //sinceHour之前的小时只能在下一天，day进位又肯能引起月进位，月又可能引起年进位
-                    val newSince = LocalDate.of(result.year, result.month, result.day).plusDays(1)
-                    if (newSince.year > result.year)//年进位
-                    {
-                        log("to updateYear because foundHour=$foundHour before sinceHour=$sinceBit cause day+1, then month+1, then year+1")
-                        sendUpdateMsg(UpdateWhich.Year, newSince.year, true)
-                    } else if (newSince.month.ordinal != result.month-1)//月进位
-                    {
-                        log("to updateMonth because foundHour=$foundHour before sinceHour=$sinceBit cause day+1, then month+1")
-                        sendUpdateMsg(UpdateWhich.Month, newSince.month.ordinal, true)
-                    } else {//日进位
-                        log("to updateDay because foundHour=$foundHour before sinceHour=$sinceBit cause day+1")
-                        sendUpdateMsg(UpdateWhich.Day, newSince.dayOfMonth - 1, true)
-                    }
-
-                    return
-                } else if (foundHour == sinceBit) {
-                    result.hour = p.first
-                    log("cron.hour=${hour.toBinary()} , got h=${result.hour} of now.hour, to update minute in same hour ...")
-                    sendUpdateMsg(UpdateWhich.Minute, since.minute, false)
-                    return
-                } else//foundHour > sinceHour: 在本小时后找到了hour时间，即[since.hour.ordinal,23]有设置
+                    log("to updateYear because foundHour=$foundHour before sinceHour=$sinceBit cause day+1, then month+1, then year+1")
+                    sendUpdateMsg(UpdateWhich.Year, newSince.year, true)
+                } else if (newSince.month.ordinal != result.month-1)//月进位
                 {
-                    result.hour = p.first
-                    log("cron.hour=${hour.toBinary()} , got h=${result.hour} after now.hour, to update minute from scratch ...")
-                    sendUpdateMsg(UpdateWhich.Minute, 0, true)
-                    return
+                    log("to updateMonth because foundHour=$foundHour before sinceHour=$sinceBit cause day+1, then month+1")
+                    sendUpdateMsg(UpdateWhich.Month, newSince.month.ordinal, true)
+                } else {//日进位
+                    log("to updateDay because foundHour=$foundHour before sinceHour=$sinceBit cause day+1")
+                    sendUpdateMsg(UpdateWhich.Day, newSince.dayOfMonth - 1, true)
                 }
+                return
+            } else if (foundHour == sinceBit) {
+                result.hour = p.first
+                log("cron.hour=${hour.toBinary()} , got h=${result.hour} of now.hour, to update minute in same hour ...")
+                sendUpdateMsg(UpdateWhich.Minute, since.minute, isFromScratch)
+                return
+            } else//foundHour > sinceHour: 在本小时后找到了hour时间，即[since.hour.ordinal,23]有设置
+            {
+                result.hour = p.first
+                log("cron.hour=${hour.toBinary()} , got h=${result.hour} after now.hour, to update minute from scratch ...")
+                sendUpdateMsg(UpdateWhich.Minute, 0, isFromScratch)
+                return
             }
         }
     }
@@ -635,8 +619,8 @@ class Cron(
                         log("to updateDay because foundMinute=$foundMinute before sinceMinute=$sinceMinute cause hour+1->day+1")
                         sendUpdateMsg(UpdateWhich.Day, newSince.dayOfMonth - 1, true)
                     } else {
-                        log("to updateHour because foundMinute=$foundMinute before sinceMinute=$sinceMinute cause hour+1->hour+1")
-                        sendUpdateMsg(UpdateWhich.Hour, newSince.hour, false)
+                        log("to updateHour because foundMinute=$foundMinute before sinceMinute=$sinceMinute cause hour+1")
+                        sendUpdateMsg(UpdateWhich.Hour, newSince.hour, true)
                     }
                 }
             }
@@ -689,7 +673,7 @@ class Cron(
 
 fun main()
 {
-    test_hour_minute0()
+    test_hour_minute02()
 }
 fun test_hour_minute0(){
     ////0,6,10,12,15  20
@@ -697,6 +681,22 @@ fun test_hour_minute0(){
 
     cron.getNext(LocalDateTime.of(2025, 4, 10,15,21,0)){
         log("ok=" + (it == Result(2025, 4, 11, 0,20, 539L)))
+    }
+}
+fun test_hour_minute01(){
+    //0,6,9，10,12, 52
+    val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 9) or (1 shl 10) or (1 shl 12) , minute = 52)
+
+    cron.getNext(LocalDateTime.of(2025, 4, 11,9,53,0)){
+        log("ok=" + (it == Result(2025, 4, 11, 10,52, 59L)))
+    }
+}
+fun test_hour_minute02(){
+    //0,6,9，10,12, 29
+    val cron = Cron(mday=Cron.AnyValue, hour = 1 or (1 shl 6) or (1 shl 9) or (1 shl 10) or (1 shl 12) , minute = 29)
+
+    cron.getNext(LocalDateTime.of(2025, 4, 11,12,30,0)){
+        log("ok=" + (it == Result(2025, 4, 12, 0,29, 12*60-1L)))
     }
 }
 fun test_hour_minute(){

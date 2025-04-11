@@ -22,7 +22,7 @@ import kotlin.math.abs
 val month_days = arrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 val month_days_leap_year = arrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
-const val EnableLog = false
+const val EnableLog = true
 inline fun log(msg: String) {
     if (EnableLog) println(msg)
 }
