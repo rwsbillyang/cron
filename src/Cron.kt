@@ -317,62 +317,63 @@ class Cron(
             sendUpdateMsg(UpdateWhich.Day, if(isFromScratch) 0 else since.dayOfMonth-1, isFromScratch)
             return
         }
-
-        if (isFromScratch) {//下一年或下几个月的情形
-            //若sinceMonth为0，必有值，除非cron.month=0
-            //若指定的是某个周期的第几天，或者是31天，又指定了某些月份，恰好这几个月份不存在这几天，就有可能找不到
-            val p = getNextBit(month, sinceBit, 12, false)
-            if (p == null) {
-                if (sinceBit == 0){
-                    finish( "invalid cron.month=${month.toBinary()}")
-                    return
-                }else{
-                    log("not found month sinceBit=$sinceBit")
-
-                    //上面的[sinceBit,12)中没有设置位，再从头开始找，若找到了，说明下一年中有设置
-                    val p2 = getNextBit(month, 0, 12, false)
-                    if(p2 == null){
-                        finish( "invalid cron.month=${month.toBinary()}")
-                        return
-                    }else{
-                        log("updateYear again from next year=${result.year + 1}, because monthIndex between [$sinceBit] is not set 1")
-                        sendUpdateMsg(UpdateWhich.Year, result.year + 1, true)
-                        return
-                    }
-                }
-            } else {
-                result.month = p.first + 1
-                log("cron.month=${month.toBinary()} , got m=${result.month}, to update day from scratch ...")
-                sendUpdateMsg(UpdateWhich.Day, 0, true)
-            }
-        } else {//本年情形
-            //本应分别检查sinceMonth之前和之后的bit位，然后做出不同的处理
-            //现改为一次检查所有month比特位，根据结果分别做处理
-            val p = getNextBit(month, sinceBit, 12, true)
-            if (p == null) {
-                finish("invalid cron.month=${month.toBinary()}")
+        //本应分别检查sinceMonth之前和之后的bit位，然后做出不同的处理
+        //现改为一次检查所有month比特位，根据结果分别做处理
+        val p = getNextBit(month, sinceBit, 12, true)
+        if (p == null) {
+            finish("invalid cron.month=${month.toBinary()}")
+            return
+        } else {
+            if (p.first < sinceBit)//[since,11]没有置1，也就是本月及之后的月份没有设置，只能是下一年的since之前的月有置1
+            {
+                //下一年，检查是否置1了，只有*才符合条件，否则可能最终无结果
+                log("updateYear again from next year=${result.year + 1}, because monthIndex=$${p.first} between [0,$sinceBit)")
+                sendUpdateMsg(UpdateWhich.Year, result.year + 1, true)
                 return
             } else {
-                if (p.first < sinceBit)//[since,11]没有置1，也就是本月及之后的月份没有设置，只能是下一年的since之前的月有置1
+                result.month = p.first + 1
+                if (p.second == 0)//same as now 本年本月
                 {
-                    //下一年，检查是否置1了，只有*才符合条件，否则可能最终无结果
-                    log("updateYear again from next year=${result.year + 1}, because monthIndex=$${p.first} between [0,$sinceBit]")
-                    sendUpdateMsg(UpdateWhich.Year, result.year + 1, true)
-                    return
-                } else {
-                    result.month = p.first + 1
-                    if (p.second == 0)//same as now 本年本月
-                    {
-                        log("cron.month=${month.toBinary()} , get result.month=${result.month} of now.month, to update day in same month ...")
-                        sendUpdateMsg(UpdateWhich.Day, since.dayOfMonth - 1, false)
-                    } else//[since.month.ordinal,11]
-                    {
-                        log("cron.month=${month.toBinary()} , get result.month=${result.month} after now.month, to update day from scratch ...")
-                        sendUpdateMsg(UpdateWhich.Day, 0, true)
-                    }
+                    log("cron.month=${month.toBinary()} , get result.month=${result.month} of now.month, to update day in same month ...")
+                    sendUpdateMsg(UpdateWhich.Day, if(isFromScratch) 0 else since.dayOfMonth-1, isFromScratch)
+                } else//[since.month.ordinal,11]
+                {
+                    log("cron.month=${month.toBinary()} , get result.month=${result.month} after now.month, to update day from scratch ...")
+                    sendUpdateMsg(UpdateWhich.Day, 0, isFromScratch)
                 }
             }
         }
+
+//        if (isFromScratch) {//下一年或下几个月的情形
+//            //若sinceMonth为0，必有值，除非cron.month=0
+//            //若指定的是某个周期的第几天，或者是31天，又指定了某些月份，恰好这几个月份不存在这几天，就有可能找不到
+//            val p = getNextBit(month, sinceBit, 12, false)
+//            if (p == null) {
+//                if (sinceBit == 0){
+//                    finish( "invalid cron.month=${month.toBinary()}")
+//                    return
+//                }else{
+//                    log("not found month sinceBit=$sinceBit")
+//
+//                    //上面的[sinceBit,12)中没有设置位，再从头开始找，若找到了，说明下一年中有设置
+//                    val p2 = getNextBit(month, 0, 12, false)
+//                    if(p2 == null){
+//                        finish( "invalid cron.month=${month.toBinary()}")
+//                        return
+//                    }else{
+//                        log("updateYear again from next year=${result.year + 1}, because monthIndex between [$sinceBit] is not set 1")
+//                        sendUpdateMsg(UpdateWhich.Year, result.year + 1, true)
+//                        return
+//                    }
+//                }
+//            } else {
+//                result.month = p.first + 1
+//                log("cron.month=${month.toBinary()} , got m=${result.month}, to update day from scratch ...")
+//                sendUpdateMsg(UpdateWhich.Day, 0, true)
+//            }
+//        } else {//本年情形
+//
+//        }
     }
 
     /**
@@ -673,7 +674,7 @@ class Cron(
 
 fun main()
 {
-    test_hour_minute02()
+    test_month_wday_hour_minute()
 }
 fun test_hour_minute0(){
     ////0,6,10,12,15  20
@@ -757,8 +758,8 @@ fun test_month_mday_hour_minute() {
         hour = (1 shl 6) or (1 shl 12) or (1 shl 18) or (1 shl 23), minute = 30 //6:30, 12:30, 18:30, 23:30
     )
 
-    cron.getNext(LocalDateTime.of(2025, 2, 28,23,20,0)){
-        log("ok=" + (it == Result(2026, 1, 29, 6,30, 24*60*334+430L)))//ok=true
+    cron.getNext(LocalDateTime.of(2025, 3, 31,23,40,0)){
+        log("ok=" + (it == Result(2026, 1, 29, 6,30, 24*60*303L+410)))//ok=true
     }
 }
 
